@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>和大人 · 菜单 [WorkBuddy]</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; width: 100%; height: 100%;
+    background: transparent; overflow: hidden;
+    user-select: none; -webkit-user-select: none;
+    font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+  }
+  /* 画布里的菜单图层：主列 + 悬停展开的二级列（和 dsh-pet 一样是「旁边弹一列」） */
+  #menu {
+    /* 20% 透（opacity .8）：字还看得清，被挡住的屏幕能隐约看见；要更透就把这里调小 */
+    opacity: .8;
+    display: flex; align-items: flex-start; gap: 6px;
+    width: 100%; height: 100%;
+    font-size: 13px; color: #f6f1e6;
+  }
+  #menu.side-left { flex-direction: row-reverse; }
+  .col {
+    border-radius: 12px;
+    background: rgba(28, 30, 36, .97);
+    /* 不要投影：投影会让整块画布看起来有重量，还会挡住屏幕 */
+    padding: 6px;
+  }
+  .col.main { width: 220px; flex: 0 0 220px; }
+  .col.sub { width: 206px; flex: 0 0 206px; display: none; }
+  .col.sub.show { display: block; }
+  .head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 6px; padding: 2px 8px 6px;
+  }
+  .head b {
+    /* 跟工作面板进度条同一个金：#d4af37 → #f1d27a 的渐变起点 */
+    color: #d4af37; font-weight: 600; letter-spacing: .5px;
+  }
+  .head span { color: rgba(246,241,230,.42); font-size: 10px; }
+  .sub h4 {
+    margin: 2px 6px 5px; padding-bottom: 4px;
+    font-size: 11px; font-weight: 600; letter-spacing: .5px;
+    color: rgba(212,175,55,.9);
+    border-bottom: 1px solid rgba(255,255,255,.10);
+  }
+  button {
+    display: block; width: 100%; text-align: left;
+    padding: 6px 9px; border: 0; border-radius: 8px;
+    background: transparent; color: inherit; font: inherit; cursor: pointer;
+  }
+  button:hover { background: rgba(255,255,255,.10); }
+  /* 有二级的只在自己的行上挂个「正在展开」的底色，不带箭头 */
+  button.cat.open { background: rgba(255,255,255,.14); }
+  .plain { color: rgba(246,241,230,.92); }
+  .sep { height: 1px; margin: 5px 4px; background: rgba(255,255,255,.12); }
+  .sub button { font-size: 12px; padding: 5px 8px; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius: 999px; }
+  ::-webkit-scrollbar-track { background: transparent; }</style>
+</head>
+<body>
+<div id="menu" class="side-right">
+  <div class="col main" id="mainCol"></div>
+  <div class="col sub" id="subCol"></div>
+</div>
+<script>
+const $ = (s) => document.querySelector(s)
+const menu = $('#menu')
+const mainCol = $('#mainCol')
+const subCol = $('#subCol')
+
+// 只有这些动作循环播放，其余动作播放一遍就回待机
+const LOOPING_ANIMS = new Set([
+  '待机-呼吸',
+  '待机-捻须',
+  '待机-背手',
+  '待机-打哈欠',
+  '待机-数朝珠',
+])
+
+const FACE_LINES = {
+  '01-招牌笑': '皇上圣明，奴才给您请安了。',
+  '02-算计': '这笔账，奴才得好好算算……',
+  '03-惊讶': '哎哟，这可了不得了！',
+  '04-委屈': '奴才冤枉啊……',
+  '05-得意': '皇上圣明！皇上说得太对了！',
+  '06-恼怒': '这事儿，奴才可不答应！',
+  '07-害怕': '皇上明鉴，奴才知错了！',
+  '08-困倦': '夜深了，奴才实在撑不住了……',
+}
+
+/** 表情的脸谱名，用和大人的口气叫出来 */
+const FACE_LABELS = {
+  '01-招牌笑': '招牌笑脸迎皇上',
+  '02-算计': '肚子里拨算盘',
+  '03-惊讶': '吓得一激灵',
+  '04-委屈': '委屈巴巴要掉泪',
+  '05-得意': '尾巴翘到天上',
+  '06-恼怒': '恼了，要骂人了',
+  '07-害怕': '腿肚子直转筋',
+  '08-困倦': '困得直点头',
+}
+
+const TREE = {
+  rite: {
+    label: '给皇上请安',
+    items: [
+      { label: '规规矩矩行个大礼', action: 'play', anim: '点击-拱手', text: '皇上圣明，奴才给您行礼了！' },
+      { label: '献件宝贝给皇上瞧', action: 'play', anim: '递古董', text: '皇上，这件青花瓷瓶，奴才特意给您寻来的。' },
+      { label: '趴下磕头表忠心', action: 'play', anim: '跪舔', text: '皇上万岁，奴才给您磕头了！' },
+      { label: '马屁拍到马蹄上', action: 'play', anim: '拍马屁', text: '皇上圣明！皇上说得太对了！' },
+      { label: '被参一本，奴才冤枉', action: 'play', anim: '被参一本', text: '皇上明鉴！奴才冤枉啊！' },
+    ],
+  },
+  life: {
+    label: '奴才的钱袋子',
+    items: [
+      { label: '逛琉璃厂淘宝贝', action: 'play', anim: '琉璃厂', text: '这件东西，才是真正的宝贝。' },
+      { label: '扒拉算盘算细账', action: 'play', anim: '常服算账', text: '这笔账，奴才得好好算算……' },
+      { label: '数银子数到手软', action: 'play', anim: '府里数银', text: '这一堆银子，都是奴才给您攒的！' },
+      { label: '袖子一抖塞银票', action: 'play', anim: '塞银票', text: '这银票，奴才替您收着……' },
+      { label: '常服回府喊小月', action: 'play', anim: '常服进门', text: '小月姑娘！小月姑娘——' },
+      { label: '手欠，自己打自己', action: 'play', anim: '银票打手', text: '我怎么就管不住这手呢！' },
+      { label: '跟老纪斗两句嘴', action: 'play', anim: '斗嘴', text: '皇上，奴才这张嘴可不饶人！' },
+    ],
+  },
+  work: {
+    label: '歇着的时候',
+    items: [
+      { label: '就这么喘口气', action: 'play', anim: '待机-呼吸' },
+      { label: '捻着胡子琢磨事', action: 'play', anim: '待机-捻须' },
+      { label: '背着手装深沉', action: 'play', anim: '待机-背手' },
+      { label: '张嘴打个大哈欠', action: 'play', anim: '待机-打哈欠' },
+      { label: '数朝珠解解闷', action: 'play', anim: '待机-数朝珠' },
+    ],
+  },
+  face: {
+    label: '变个脸给皇上看',
+    items: Object.keys(FACE_LINES).map((face) => ({
+      label: FACE_LABELS[face] || face.slice(3),
+      action: 'face',
+      face,
+      text: FACE_LINES[face],
+    })),
+  },
+}
+
+let openCat = null
+let closeTimer = 0
+const isSub = window.hedaren.isSubFrame === true
+
+function el(tag, props = {}, children = []) {
+  const node = document.createElement(tag)
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'text') node.textContent = v
+    else if (k === 'className') node.className = v
+    else node[k] = v
+  }
+  for (const c of children) node.appendChild(c)
+  return node
+}
+
+function act(payload) {
+  window.hedaren.menuAction(payload)
+}
+
+/** 报一次尺寸 + 主列/二级列的矩形（主进程据此只让这两块吃点击，其余画布继续穿透） */
+function report() {
+  requestAnimationFrame(() => {
+    const mainRect = mainCol.getBoundingClientRect()
+    const height = Math.ceil(Math.max(mainRect.height, subCol.classList.contains('show') ? subCol.getBoundingClientRect().height : 0)) + 2
+    const regions = [{ x: mainRect.x, y: mainRect.y, w: mainRect.width, h: mainRect.height }]
+    if (subCol.classList.contains('show')) {
+      const r = subCol.getBoundingClientRect()
+      regions.push({ x: r.x, y: r.y, w: r.width, h: r.height })
+    }
+    window.hedaren.resizeMenu(height)
+    if (menuShown) window.hedaren.menuRegions?.(regions)
+  })
+}
+
+/** 悬停到有二级的行就展开（不用点）；离开整块菜单再收 */
+function openCategory(key) {
+  const group = TREE[key]
+  if (!group) return
+  if (closeTimer) {
+    clearTimeout(closeTimer)
+    closeTimer = 0
+  }
+  if (openCat === key && subCol.classList.contains('show')) return
+  openCat = key
+  for (const btn of mainCol.querySelectorAll('button.cat')) btn.classList.toggle('open', btn.dataset.cat === key)
+  subCol.innerHTML = ''
+  subCol.appendChild(el('h4', { text: group.label }))
+  for (const item of group.items) {
+    subCol.appendChild(
+      el('button', {
+        text: item.label,
+        onclick: () =>
+          act({
+            action: item.action,
+            data: {
+              anim: item.anim,
+              face: item.face,
+              text: item.text,
+              // 只有「待机/循环」类动作循环播放，其余动作播一遍就回待机
+              loop: item.loop !== undefined ? item.loop : LOOPING_ANIMS.has(item.anim),
+            },
+          }),
+      }),
+    )
+  }
+  subCol.classList.add('show')
+  report()
+}
+
+function closeCategory() {
+  if (!openCat) return
+  openCat = null
+  subCol.classList.remove('show')
+  subCol.innerHTML = ''
+  for (const btn of mainCol.querySelectorAll('button.cat')) btn.classList.remove('open')
+  report()
+}
+
+function scheduleClose() {
+  if (closeTimer) clearTimeout(closeTimer)
+  closeTimer = setTimeout(() => {
+    closeTimer = 0
+    closeCategory()
+  }, 180)
+}
+
+/** 主列：说话 / 国库 / 四组（悬停展开）/ 告退（纯按钮） */
+function renderMain() {
+  mainCol.innerHTML = ''
+  const head = el('div', { className: 'head' }, [
+    el('b', { text: '和大人' }),
+    el('span', { text: 'WorkBuddy 通用版' }),
+  ])
+  head.addEventListener('mouseenter', () => closeCategory())
+  mainCol.appendChild(head)
+  // 和大人府邸（WorkBuddy 版）：顶替 DSH 设置页，点开独立设置窗口
+  mainCol.appendChild(
+    el('button', { className: 'plain', text: '和大人府邸', onclick: () => act({ action: 'mansion' }) }),
+  )
+  mainCol.appendChild(
+    el('button', { className: 'plain', text: '跟奴才说两句', onclick: () => act({ action: 'chat' }) }),
+  )
+  mainCol.appendChild(
+    el('button', { className: 'plain', text: '查询国库', onclick: () => act({ action: 'treasury' }) }),
+  )
+  // 移到没有二级的行上 → 二级列立刻收起（别让它赖着不回去）
+  for (const btn of mainCol.querySelectorAll('button.plain')) {
+    btn.addEventListener('mouseenter', () => closeCategory())
+  }
+  mainCol.appendChild(el('div', { className: 'sep' }))
+
+  // 捕鱼玩法（纯视觉·一次性）：只在右键这里开关。开启后飞行满 2 秒播一次撒网动画，
+  // 随即自动关闭，下次要再捕需回来重新开启。府邸窗口里已不再放这个开关。
+  const fishBtn = el('button', { className: 'plain', text: '捕鱼一次：…' })
+  fishBtn.addEventListener('mouseenter', () => closeCategory())
+  window.hedaren.readFishPlay?.().then((r) => {
+    fishBtn.textContent = `捕鱼一次：${r?.enabled ? '开（待触发）' : '关'}`
+  }).catch(() => { fishBtn.textContent = '捕鱼一次：关' })
+  fishBtn.addEventListener('click', async () => {
+    const cur = await window.hedaren.readFishPlay?.().catch(() => ({ enabled: false }))
+    const next = !cur?.enabled
+    await window.hedaren.setFishPlay?.(next)
+    fishBtn.textContent = `捕鱼一次：${next ? '开（待触发）' : '关'}`
+  })
+  mainCol.appendChild(fishBtn)
+
+  for (const [key, group] of Object.entries(TREE)) {
+    const btn = el('button', { className: 'cat', text: group.label })
+    btn.dataset.cat = key
+    // 悬停即展开；点击也展开（键盘/触控板用户兜底）
+    btn.addEventListener('mouseenter', () => openCategory(key))
+    btn.addEventListener('focus', () => openCategory(key))
+    btn.addEventListener('click', () => openCategory(key))
+    mainCol.appendChild(btn)
+  }
+
+  mainCol.appendChild(el('div', { className: 'sep' }))
+  // 告退没有二级：就是个按钮，点了就走
+  const quitBtn = el('button', { className: 'plain', text: '奴才告退', onclick: () => act({ action: 'quit' }) })
+  quitBtn.addEventListener('mouseenter', () => closeCategory())
+  mainCol.appendChild(quitBtn)
+  report()
+}
+
+// 光标离开整块菜单（主列 + 二级列）才收二级
+menu.addEventListener('mouseleave', scheduleClose)
+menu.addEventListener('mouseenter', () => {
+  if (closeTimer) {
+    clearTimeout(closeTimer)
+    closeTimer = 0
+  }
+})
+
+// 主进程告诉菜单往哪边展开（右边没地方就翻到左边）
+window.hedaren.onMenuSide?.((side) => {
+  menu.classList.toggle('side-left', String(side) === 'left')
+})
+
+let menuShown = false
+window.hedaren.onMenuOpened(() => {
+  menuShown = true
+  closeCategory()
+  renderMain()
+})
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') window.hedaren.closeMenu()
+})
+window.addEventListener('contextmenu', (e) => e.preventDefault())
+
+renderMain()
+</script>
+</body>
+</html>

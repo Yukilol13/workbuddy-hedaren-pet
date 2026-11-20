@@ -1,0 +1,4 @@
+{
+  "_comment": "对话统一由 WorkBuddy 当前会话模型（Agent）直接生成，不再使用任何外部大模型 API 或 API Key。本文件仅保留非模型类设置。",
+  "jailThreshold": 10
+}

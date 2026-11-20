@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>和大人 · 对话 [WorkBuddy]</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; width: 100%; height: 100%;
+    background: transparent; overflow: hidden;
+    user-select: none; -webkit-user-select: none;
+    font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+  }
+  #panel {
+    display: flex; flex-direction: column;
+    width: 100%; height: 100%;
+    padding: 6px;
+    border-radius: 15px;
+    background: #1a1d24;
+    color: #f6f1e6;
+    font-size: 13px;
+    box-shadow: 0 16px 44px rgba(0,0,0,.5), 0 0 0 1px rgba(212,175,55,.2) inset;
+    overflow: hidden;
+  }
+  #head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 5px 9px 7px;
+    font-size: 11px; color: rgba(246,241,230,.62);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    -webkit-app-region: drag;
+  }
+  #close {
+    -webkit-app-region: no-drag;
+    border: 0; background: transparent; color: rgba(246,241,230,.7);
+    font-size: 15px; line-height: 1; cursor: pointer; padding: 2px 4px;
+  }
+  #log {
+    flex: 1; overflow-y: auto; padding: 8px 4px 6px;
+    display: flex; flex-direction: column; gap: 7px;
+    line-height: 1.5; overscroll-behavior: contain;
+  }
+  #modelRow {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 9px 2px;
+    -webkit-app-region: no-drag;
+    font-size: 11px; color: rgba(246,241,230,.62);
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  #modelRow b { color: var(--gold, #d4af37); font-weight: 600; }
+  .msg { max-width: 88%; padding: 7px 11px; border-radius: 11px; white-space: pre-wrap; word-break: break-word; }
+  .msg.user { align-self: flex-end; background: rgba(212,175,55,.22); color: #ffeec2; }
+  .msg.assistant { align-self: flex-start; background: rgba(255,255,255,.07); }
+  .msg.typing { opacity: .55; font-style: italic; }
+  #row { display: flex; gap: 6px; padding-top: 7px; border-top: 1px solid rgba(255,255,255,.08); }
+  #input {
+    flex: 1; resize: none; overflow: hidden; height: 40px; max-height: 92px;
+    padding: 8px 10px; border-radius: 10px;
+    border: 1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.06); color: inherit;
+    font: inherit; font-size: 13px; line-height: 1.45; outline: none;
+  }
+  #send {
+    width: 54px; border: 0; border-radius: 10px;
+    background: #d4af37; color: #2a1e00; font: inherit; font-weight: 700; cursor: pointer;
+  }
+  #send:disabled { opacity: .45; cursor: default; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius: 999px; }
+  ::-webkit-scrollbar-track { background: transparent; }</style>
+</head>
+<body>
+<div id="panel">
+  <div id="head"><span>与和大人说话（您就是皇上）</span><button id="close" type="button">×</button></div>
+  <div id="modelRow">对话模型：<b>WorkBuddy 当前会话模型</b></div>
+  <div id="log"></div>
+  <div id="row">
+    <textarea id="input" rows="1" placeholder="皇上请讲，奴才听着呢……"></textarea>
+    <button id="send" type="button">传旨</button>
+  </div>
+</div>
+<script>
+const $ = (s) => document.querySelector(s)
+const log = $('#log')
+const input = $('#input')
+const send = $('#send')
+const closeBtn = $('#close')
+
+let state = { chat: { messages: [], pending: null } }
+let lastSig = ''
+
+function render() {
+  const chat = state.chat || {}
+  const messages = Array.isArray(chat.messages) ? chat.messages : []
+  const pendingId = chat.pending && chat.pending.id ? String(chat.pending.id) : ''
+  const last = messages[messages.length - 1]
+  const sig = `${messages.length}:${last ? last.id : ''}:${pendingId}`
+  if (sig !== lastSig) {
+    lastSig = sig
+    log.innerHTML = ''
+    for (const m of messages.slice(-60)) {
+      const node = document.createElement('div')
+      node.className = 'msg ' + (m.role === 'user' ? 'user' : 'assistant')
+      node.textContent = m.text
+      log.appendChild(node)
+    }
+    if (pendingId) {
+      const node = document.createElement('div')
+      node.className = 'msg assistant typing'
+      node.textContent = '……'
+      log.appendChild(node)
+    }
+    log.scrollTop = log.scrollHeight
+  }
+  send.disabled = Boolean(pendingId)
+}
+
+async function apply(next) {
+  if (!next) return
+  state = next
+  render()
+}
+
+async function sendMessage() {
+  const text = input.value.trim()
+  if (!text || state.chat?.pending) return
+  input.value = ''
+  input.style.height = '40px'
+  const now = Date.now()
+  const chat = state.chat || {}
+  const messages = [...(chat.messages || []), { id: now, role: 'user', text, at: now }]
+  const merged = await window.hedaren.writeState({
+    chat: { ...chat, open: true, messages, pending: { id: now + 1, text } },
+  })
+  await apply(merged)
+  input.focus()
+}
+
+send.addEventListener('click', () => void sendMessage())
+closeBtn.addEventListener('click', () => window.hedaren.closeChat())
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault()
+    void sendMessage()
+  }
+  if (e.key === 'Escape') window.hedaren.closeChat()
+})
+input.addEventListener('input', () => {
+  input.style.height = '40px'
+  input.style.height = Math.min(92, input.scrollHeight) + 'px'
+})
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') window.hedaren.closeChat()
+})
+
+async function boot() {
+  try {
+    await apply(await window.hedaren.readState())
+  } catch {}
+  setInterval(async () => {
+    try {
+      await apply(await window.hedaren.readState())
+    } catch {}
+  }, 700)
+  setTimeout(() => input.focus(), 120)
+}
+boot()
+</script>
+</body>
+</html>

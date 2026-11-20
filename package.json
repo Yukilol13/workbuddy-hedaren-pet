@@ -1,0 +1,30 @@
+{
+  "name": "workbuddy-hedaren-pet",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "和大人桌面宠物（WorkBuddy 通用版）：Q 版两头身清朝权臣，透明 Electron 窗口、全套动画与表情、三层记忆聊天人格，跟随 WorkBuddy 工作状态、查 WorkBuddy 积分国库、和大人府邸、右键一次性撒网捕鱼。不依赖 DSH，任何人都能用。",
+  "keywords": [
+    "workbuddy",
+    "desktop-pet",
+    "electron",
+    "和大人",
+    "和珅"
+  ],
+  "author": "Yukilol13",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Yukilol13/workbuddy-hedaren-pet.git"
+  },
+  "homepage": "https://github.com/Yukilol13/workbuddy-hedaren-pet",
+  "main": "mcp-server.js",
+  "scripts": {
+    "pet:install": "node --no-warnings install.js",
+    "pet:start": "node --no-warnings start.js",
+    "pet:uninstall": "node --no-warnings install.js --uninstall"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

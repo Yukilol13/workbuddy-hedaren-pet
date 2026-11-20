@@ -1,0 +1,9 @@
+node_modules/
+*.log
+work/
+tmp-userdata/
+.DS_Store
+Thumbs.db
+
+# 下载来的 Electron 运行时（体积大，不入库；install 时自动下载）
+vendor/electron/

@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>和大人府邸 [WorkBuddy]</title>
+<style>
+  /* 配色与「工作中」的聊天泡泡/工作面板一致：深色底 + 米色字 + 金色点缀 */
+  :root {
+    --bg: #181c26;          /* 等同工作面板 rgba(24,28,38) */
+    --card: #20252f;        /* 卡片略亮一档 */
+    --card-2: #262c38;      /* 卡片内的格子 */
+    --ink: #f8edda;         /* 米色正文，等同工作面板 #f8edda */
+    --ink-soft: rgba(248, 237, 218, .64);
+    --gold: #d4af37;        /* 工作进度条渐变起点 */
+    --gold-soft: #f1d27a;   /* 工作进度条渐变终点 */
+    --line: rgba(212, 175, 55, .25);
+    --line-soft: rgba(255, 255, 255, .09);
+    --red: #e0736a;         /* 深色底上的红 */
+    --green: #74b98a;       /* 深色底上的绿 */
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif; font-size: 13px; line-height: 1.6;
+  }
+  header {
+    padding: 14px 22px;
+    background: linear-gradient(135deg, #1c202b, #2a2f1d);
+    border-bottom: 1px solid var(--line);
+    color: #f8edda; display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 0 0 1px rgba(212,175,55,.2) inset;
+  }
+  header h1 { margin: 0; font-size: 19px; letter-spacing: 2px; font-weight: 600; color: var(--gold-soft); }
+  header .sub { font-size: 11px; opacity: .62; letter-spacing: 0; }
+  header button {
+    background: rgba(255,255,255,.08); border: 1px solid var(--line);
+    color: var(--ink); border-radius: 6px; padding: 5px 12px; cursor: pointer; font-size: 12px;
+  }
+  header button:hover { background: rgba(212,175,55,.18); border-color: var(--gold); }
+  main { padding: 16px 22px 28px; max-width: 860px; margin: 0 auto; }
+  .card {
+    background: var(--card); border: 1px solid var(--line-soft); border-radius: 10px;
+    padding: 14px 18px; margin-bottom: 14px; box-shadow: 0 0 0 1px rgba(212,175,55,.10) inset;
+  }
+  .card h2 {
+    margin: 0 0 10px; font-size: 15px; color: var(--gold-soft);
+    border-bottom: 1px dashed var(--line); padding-bottom: 7px; font-weight: 600;
+  }
+  .row { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; gap: 12px; flex-wrap: wrap; }
+  .row .label { color: var(--ink-soft); }
+  .row .val { font-weight: 600; }
+  .val.big { font-size: 18px; color: var(--red); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .stat { background: var(--card-2); border: 1px solid var(--line-soft); border-radius: 6px; padding: 9px 12px; }
+  .stat .k { font-size: 11px; color: var(--ink-soft); }
+  .stat .v { font-size: 17px; font-weight: 600; margin-top: 2px; }
+  input[type=range] { flex: 1; min-width: 120px; accent-color: var(--gold); }
+  input[type=number] { width: 76px; padding: 4px 7px; border: 1px solid var(--line-soft); border-radius: 4px; background: rgba(255,255,255,.06); color: var(--ink); }
+  button.btn {
+    background: var(--gold); color: #2a1e00; border: 0; border-radius: 6px;
+    padding: 6px 14px; cursor: pointer; font-size: 12px; font-weight: 700;
+  }
+  button.btn:hover { background: var(--gold-soft); }
+  button.btn.ghost { background: transparent; color: var(--gold-soft); border: 1px solid var(--gold); font-weight: 600; }
+  button.btn.ghost:hover { background: rgba(212,175,55,.16); }
+  button.btn.danger { background: var(--red); color: #1a1010; }
+  .toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+  .toggle input { width: 16px; height: 16px; accent-color: var(--gold); }
+  .muted { color: var(--ink-soft); font-size: 11px; }
+  .diary-file {
+    display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px dashed var(--line-soft);
+  }
+  .diary-file:last-child { border-bottom: 0; }
+  .diary-file .name { flex: 1; }
+  .diary-file .meta { font-size: 11px; color: var(--ink-soft); }
+  .badge { font-size: 10px; padding: 1px 6px; border-radius: 8px; background: rgba(212,175,55,.18); color: var(--gold-soft); }
+  .badge.main { background: rgba(224,115,106,.28); color: #ffc4bd; }
+  #status { position: fixed; bottom: 14px; right: 18px; background: var(--gold); color: #2a1e00; padding: 7px 14px; border-radius: 5px; opacity: 0; transition: opacity .25s; font-size: 12px; font-weight: 700; }
+  #status.show { opacity: .96; }
+  .empty { color: var(--ink-soft); font-style: italic; padding: 8px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>和大人府邸</h1>
+    <div class="sub">WorkBuddy 通用版 · 国库 / 家底 / 颤栗值官位 / 日记</div>
+  </div>
+  <div>
+    <button id="refresh">刷新</button>
+    <button id="close">关窗</button>
+  </div>
+</header>
+<main>
+  <div class="card">
+    <h2>🪙 和珅的家底</h2>
+    <div class="grid" id="assets"></div>
+    <div id="balanceLine" class="muted" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card">
+    <h2>😨 胆气与官位</h2>
+    <div class="grid" id="moodStats"></div>
+    <div class="row" style="margin-top:8px">
+      <span class="muted">皇上骂我、夸我、升降我的官，和大人都会记在心里。</span>
+      <button class="btn ghost" id="resetMood">把心气归回原样</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>⚙️ 基本设置</h2>
+    <div class="row">
+      <span class="label">桌宠显示</span>
+      <label class="toggle"><input type="checkbox" id="visible"> 在桌面上显示</label>
+    </div>
+    <div class="row">
+      <span class="label">自动唤醒</span>
+      <label class="toggle"><input type="checkbox" id="autostart"> 皇上开衙时，奴才自己来上朝</label>
+    </div>
+    <div class="muted" style="margin-top:4px">开了它，皇上每回开启 WorkBuddy 新会话，和大人便准时现身请安，不必劳驾宣召；关了它，奴才就在府里候着，皇上唤一声（或点托盘）才敢露面。改完得重启 WorkBuddy 才作数。</div>
+    <div class="row">
+      <span class="label">大小</span>
+      <input type="range" id="scale" min="70" max="150" step="5">
+      <span class="val" id="scaleVal">100%</span>
+    </div>
+    <div class="row">
+      <span class="label">甩飞阈值</span>
+      <input type="range" id="settle" min="50" max="500" step="10">
+      <span class="val" id="settleVal">200ms</span>
+    </div>
+    <div class="row">
+      <span class="label">亏空阈值（积分，0=不触发）</span>
+      <input type="number" id="jail" min="0" step="1">
+      <button class="btn" id="saveSettings">保存设置</button>
+    </div>
+    <div class="muted" style="margin-top:6px">当日消耗额超过此积分值时，和大人穿肚兜坐牢房并喊「小月莫愁」（每天最多触发一次）。</div>
+  </div>
+
+  <div class="card">
+    <h2>💬 对话模型</h2>
+    <div class="row">
+      <span class="label">当前模型</span>
+      <span class="val" id="curModel">WorkBuddy 模型（当前会话）</span>
+    </div>
+    <div class="muted" style="margin-top:6px">和大人直接调用 WorkBuddy 当前会话的模型回复，无需另外配置 API Key。对话入口：在 WorkBuddy 里说「跟和大人说……」。</div>
+  </div>
+
+  <div class="card">
+    <h2>📖 和大人日记</h2>
+    <div id="diaryStats" class="muted"></div>
+    <div id="diaryList" style="margin-top:8px"></div>
+    <div style="margin-top:8px">
+      <button class="btn ghost" id="checkAll">全选散账</button>
+      <button class="btn ghost" id="uncheckAll">都不选</button>
+      <button class="btn danger" id="burn">烧了这几本</button>
+    </div>
+  </div>
+</main>
+<div id="status"></div>
+
+<script>
+const $ = (s) => document.querySelector(s)
+const h = window.hedaren
+let snapshot = null
+
+function toast(msg) {
+  const el = $('#status')
+  el.textContent = msg
+  el.classList.add('show')
+  clearTimeout(toast._t)
+  toast._t = setTimeout(() => el.classList.remove('show'), 2200)
+}
+
+function num(v, fallback = 0) { const n = Number(v); return Number.isFinite(n) ? n : fallback }
+function fmt(n) { return Number(n).toLocaleString('zh-CN', { maximumFractionDigits: 2 }) }
+
+function renderAssets(d) {
+  const t = d.treasury || {}
+  const credits = d.credits || {}
+  const items = [
+    // 国库总余额：实时读 WorkBuddy 本地 DB（credits.total = 累计消耗总额），不用可能过期的 t.guoku
+    { k: '国库总余额', v: credits.ok ? fmt(credits.total) + ' 积分' : (t.guoku != null ? fmt(t.guoku) + ' 积分' : '—') },
+    { k: '今日消耗', v: credits.ok ? fmt(credits.today) + ' 积分' : '—' },
+    { k: '和大人资产', v: fmt(t.assets || 0) + ' 积分' },
+    { k: '累计抽成', v: fmt(t.totalSiphoned || 0) + ' 积分' },
+    { k: '捕鱼数量', v: fmt(t.fish || 0) + ' 条' },
+  ]
+  $('#assets').innerHTML = items.map(x => `<div class="stat"><div class="k">${x.k}</div><div class="v">${x.v}</div></div>`).join('')
+  $('#balanceLine').textContent = credits.ok
+    ? `积分数据源：${credits.source || '本地'} ｜ 今日 ${fmt(credits.today)} ｜ 累计 ${fmt(credits.total)}`
+    : '（积分数据源暂不可用）'
+}
+
+function renderMood(m) {
+  const items = [
+    { k: '颤栗值', v: m.trembleLabel ?? '5.0' },
+    { k: '官位', v: m.rankLabel ?? '一品' },
+    { k: '心气', v: m.stateLabel ?? '平常' },
+    { k: '剩余', v: m.state === 'normal' ? '—' : `${m.stateTurnsLeft ?? 0} 轮 / ${Math.round((m.stateMsLeft || 0)/1000)} 秒` },
+  ]
+  $('#moodStats').innerHTML = items.map(x => `<div class="stat"><div class="k">${x.k}</div><div class="v">${x.v}</div></div>`).join('')
+}
+
+function renderSettings(s) {
+  $('#visible').checked = s.visible !== false
+  const scale = Math.round((num(s.scale, 1)) * 100)
+  $('#scale').value = Math.min(150, Math.max(70, scale))
+  $('#scaleVal').textContent = scale + '%'
+  const settle = num(s.throwSettleMs, 200)
+  $('#settle').value = Math.min(500, Math.max(50, settle))
+  $('#settleVal').textContent = settle + 'ms'
+  $('#jail').value = num(s.jailThreshold, 10)
+}
+
+function renderDiary(d) {
+  const st = d.stats || {}
+  $('#diaryStats').textContent = `共 ${st.files || 0} 本册子 · ${st.entries || 0} 笔旧账 · 约 ${fmt(st.tokens || 0)} tokens · ${fmt((st.bytes || 0)/1024)} KB`
+  const files = d.files || []
+  if (!files.length) { $('#diaryList').innerHTML = '<div class="empty">还没有日记。</div>'; return }
+  $('#diaryList').innerHTML = files.map(f => `
+    <div class="diary-file">
+      <input type="checkbox" class="diary-chk" value="${f.id}" ${f.burnable ? '' : 'disabled'}>
+      <span class="name">${f.name || f.id} <span class="badge ${f.burnable ? '' : 'main'}">${f.burnable ? '散账' : '主账·烧不得'}</span></span>
+      <span class="meta">${f.items || 0} 笔 · ${fmt(f.tokens || 0)}t</span>
+    </div>`).join('')
+}
+
+async function load() {
+  try {
+    const d = await h.mansionSnapshot()
+    if (!d || !d.ok) { toast('读取府邸数据失败：' + (d?.error || '未知')); return }
+    snapshot = d
+    renderAssets(d)
+    renderMood(d.mood || {})
+    renderSettings(d.state || {})
+    renderDiary(d.diary || {})
+    // 自动唤醒开关单独读（不在府邸快照里）；用户正点着它时不抢值
+    try {
+      const a = await h.readAutostart()
+      if (document.activeElement !== $('#autostart')) $('#autostart').checked = !!a.enabled
+    } catch {}
+  } catch (e) { toast('加载失败：' + (e?.message || e)) }
+}
+
+// 自动刷新（每 3 秒）
+setInterval(() => { if (!document.hidden) load() }, 3000)
+
+$('#refresh').onclick = () => { load(); toast('已刷新') }
+$('#close').onclick = () => h.mansionClose()
+$('#resetMood').onclick = async () => {
+  const r = await h.mansionResetMood()
+  toast(r?.ok ? '心气已归回原样' : '重置失败')
+  load()
+}
+$('#saveSettings').onclick = () => {
+  const state = {
+    visible: $('#visible').checked,
+    scale: num($('#scale').value, 100) / 100,
+    throwSettleMs: num($('#settle').value, 200),
+    jailThreshold: Math.max(0, num($('#jail').value, 10)),
+  }
+  h.writeState(state)
+  toast('设置已保存')
+}
+$('#scale').oninput = (e) => $('#scaleVal').textContent = e.target.value + '%'
+$('#settle').oninput = (e) => $('#settleVal').textContent = e.target.value + 'ms'
+$('#autostart').onchange = async (e) => {
+  const on = e.target.checked
+  const r = await h.setAutostart(on)
+  if (r?.ok) {
+    toast(on ? '得嘞！往后皇上开衙，奴才准点来上朝' + (r.note ? `（${r.note}）` : '') : '好嘞，往后奴才候着传唤再露面' + (r.note ? `（${r.note}）` : ''))
+  } else {
+    toast('改不动啊：' + (r?.error || '未知原因'))
+    e.target.checked = !on
+  }
+}
+$('#checkAll').onclick = () => document.querySelectorAll('.diary-chk:not(:disabled)').forEach(x => x.checked = true)
+$('#uncheckAll').onclick = () => document.querySelectorAll('.diary-chk').forEach(x => x.checked = false)
+$('#burn').onclick = async () => {
+  const ids = [...document.querySelectorAll('.diary-chk:checked')].map(x => x.value)
+  if (!ids.length) { toast('先勾选要烧的散账'); return }
+  if (!confirm('确定烧掉这 ' + ids.length + ' 本散账？此操作不可恢复。')) return
+  const r = await h.mansionBurnDiary(ids)
+  toast(r?.ok ? `已烧 ${ids.length} 本` : '焚毁失败：' + (r?.error || ''))
+  load()
+}
+
+load()
+</script>
+</body>
+</html>

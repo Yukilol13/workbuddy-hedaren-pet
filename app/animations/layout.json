@@ -1,0 +1,407 @@
+{
+  "beican": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 14.0,
+    "top": 43.0,
+    "width": 224.0,
+    "height": 259.0,
+    "anchorX": 125.0,
+    "frames": 104,
+    "res": 1
+  },
+  "bow": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 36.0,
+    "top": 43.0,
+    "width": 200.0,
+    "height": 259.0,
+    "anchorX": 103.0,
+    "frames": 44,
+    "res": 1
+  },
+  "breath": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 57.0,
+    "top": 43.0,
+    "width": 166.0,
+    "height": 259.0,
+    "anchorX": 82.5,
+    "frames": 22,
+    "res": 1
+  },
+  "changfu": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 6.0,
+    "top": 43.0,
+    "width": 242.0,
+    "height": 259.0,
+    "anchorX": 133.0,
+    "frames": 104,
+    "res": 1
+  },
+  "dianchao": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 52.0,
+    "top": 39.0,
+    "width": 180.0,
+    "height": 264.0,
+    "anchorX": 88.0,
+    "frames": 96,
+    "res": 1
+  },
+  "douzui": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 49.0,
+    "top": 43.0,
+    "width": 184.0,
+    "height": 259.0,
+    "anchorX": 90.0,
+    "frames": 104,
+    "res": 1
+  },
+  "gift": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 51.0,
+    "top": 43.0,
+    "width": 180.0,
+    "height": 259.0,
+    "anchorX": 88.0,
+    "frames": 104,
+    "res": 1
+  },
+  "idle": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 41.0,
+    "top": 43.0,
+    "width": 198.0,
+    "height": 259.0,
+    "anchorX": 98.0,
+    "frames": 120,
+    "res": 1
+  },
+  "idle-beishou": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 56.0,
+    "top": 43.0,
+    "width": 167.0,
+    "height": 259.0,
+    "anchorX": 83.0,
+    "frames": 104,
+    "res": 1
+  },
+  "idle-changfu": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 52.0,
+    "top": 53.0,
+    "width": 167.0,
+    "height": 249.0,
+    "anchorX": 87.0,
+    "frames": 1,
+    "res": 1
+  },
+  "idle-hachian": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 11.0,
+    "top": 43.0,
+    "width": 240.0,
+    "height": 259.0,
+    "anchorX": 128.0,
+    "frames": 104,
+    "res": 1
+  },
+  "idle-jail": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 31.0,
+    "top": 42.0,
+    "width": 243.0,
+    "height": 260.0,
+    "anchorX": 93.0,
+    "frames": 1,
+    "res": 1
+  },
+  "idle-jail-left": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 4.0,
+    "top": 42.0,
+    "width": 243.0,
+    "height": 260.0,
+    "anchorX": 150.0,
+    "frames": 1,
+    "res": 1
+  },
+  "idle-nianxu": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 50.0,
+    "top": 43.0,
+    "width": 179.0,
+    "height": 259.0,
+    "anchorX": 89.0,
+    "frames": 104,
+    "res": 1
+  },
+  "idle-shuzhu": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 49.0,
+    "top": 43.0,
+    "width": 181.0,
+    "height": 259.0,
+    "anchorX": 90.5,
+    "frames": 104,
+    "res": 1
+  },
+  "idle-static": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 63.0,
+    "top": 43.0,
+    "width": 166.0,
+    "height": 259.0,
+    "anchorX": 76.0,
+    "frames": 1,
+    "res": 1
+  },
+  "kneel": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 49.0,
+    "top": 43.0,
+    "width": 185.0,
+    "height": 259.0,
+    "anchorX": 90.0,
+    "frames": 104,
+    "res": 1
+  },
+  "liulichang": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 49.0,
+    "top": 6.0,
+    "width": 188.0,
+    "height": 296.0,
+    "anchorX": 90.0,
+    "frames": 104,
+    "res": 1
+  },
+  "netcatch": {
+    "canvas": [
+      475.0,
+      315.0
+    ],
+    "left": 0.0,
+    "top": 0.0,
+    "width": 475.0,
+    "height": 315.0,
+    "anchorX": 110.56,
+    "frames": 120,
+    "duration": 4000,
+    "res": 1
+  },
+  "netcatch-left": {
+    "canvas": [
+      475.0,
+      315.0
+    ],
+    "left": 0.0,
+    "top": 0.0,
+    "width": 475.0,
+    "height": 315.0,
+    "anchorX": 364.44,
+    "frames": 120,
+    "duration": 4000,
+    "res": 1
+  },
+  "paimapi": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 49.0,
+    "top": 43.0,
+    "width": 183.0,
+    "height": 259.0,
+    "anchorX": 90.0,
+    "frames": 104,
+    "res": 1
+  },
+  "saiyinhpiao": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 35.0,
+    "top": 15.0,
+    "width": 208.0,
+    "height": 287.0,
+    "anchorX": 104.0,
+    "frames": 96,
+    "res": 1
+  },
+  "shuyin": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 24.0,
+    "top": 24.0,
+    "width": 212.0,
+    "height": 278.0,
+    "anchorX": 115.0,
+    "frames": 104,
+    "res": 1
+  },
+  "slap": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 50.0,
+    "top": 39.0,
+    "width": 179.0,
+    "height": 263.0,
+    "anchorX": 89.0,
+    "frames": 92,
+    "res": 1
+  },
+  "suanzhang": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 49.0,
+    "top": 43.0,
+    "width": 178.0,
+    "height": 259.0,
+    "anchorX": 90.0,
+    "frames": 104,
+    "res": 1
+  },
+  "thrown": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 6.0,
+    "top": 41.0,
+    "width": 270.0,
+    "height": 261.0,
+    "anchorX": 110.5,
+    "frames": 1,
+    "res": 1
+  },
+  "thrown-left": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 2.0,
+    "top": 41.0,
+    "width": 270.0,
+    "height": 261.0,
+    "anchorX": 159.5,
+    "frames": 1,
+    "res": 1
+  },
+  "work-end": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 52.0,
+    "top": 39.0,
+    "width": 175.0,
+    "height": 264.0,
+    "anchorX": 88.0,
+    "frames": 27,
+    "res": 1
+  },
+  "work-loop": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 54.0,
+    "top": 44.0,
+    "width": 172.0,
+    "height": 259.0,
+    "anchorX": 86.0,
+    "frames": 49,
+    "res": 1
+  },
+  "work-start": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 52.0,
+    "top": 44.0,
+    "width": 180.0,
+    "height": 259.0,
+    "anchorX": 89.5,
+    "frames": 20,
+    "res": 1
+  },
+  "work-tail": {
+    "canvas": [
+      278.0,
+      306.0
+    ],
+    "left": 59.0,
+    "top": 40.0,
+    "width": 162.0,
+    "height": 263.0,
+    "anchorX": 80.5,
+    "frames": 12,
+    "res": 1
+  }
+}

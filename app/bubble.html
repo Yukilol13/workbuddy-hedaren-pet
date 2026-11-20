@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>和大人 · 气泡 [WorkBuddy]</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; width: 100%; height: 100%;
+    background: transparent; overflow: hidden;
+    user-select: none; -webkit-user-select: none;
+    font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+  }
+  /* 20% 透（opacity .8）：字还看得清，被挡住的屏幕能隐约看见；要更透就把这里调小 */
+  #stage { position: relative; width: 100%; height: 100%; padding: 4px 6px 16px; opacity: .8; }
+  #bubble {
+    position: relative;
+    display: none;
+    width: 100%;
+    padding: 9px 13px;
+    border-radius: 14px;
+    background: rgba(255, 250, 240, .97);
+    color: #17202b;
+    font-size: 15px;
+    line-height: 1.45;
+    box-shadow: none;
+    align-items: center;
+    gap: 8px;
+  }
+  #bubble.show { display: flex; }
+  #bubble::after {
+    content: ""; position: absolute; left: 50%; bottom: -7px;
+    width: 14px; height: 14px; background: rgba(255, 250, 240, .97);
+    transform: translateX(-50%) rotate(45deg); border-radius: 2px;
+  }
+  #face {
+    width: 42px; height: 42px; flex: 0 0 42px;
+    object-fit: contain; border-radius: 50%;
+    background: rgba(245, 238, 220, .7);
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,.18));
+  }
+  #bubbleText {
+    flex: 1; white-space: pre-wrap; word-break: break-word;
+    max-height: 88px; overflow: hidden;
+  }
+  #workPanel {
+    display: none;
+    width: 100%;
+    padding: 9px 13px;
+    border-radius: 14px;
+    background: rgba(24, 28, 38, .96);
+    color: #f8edda;
+    font-size: 13px;
+    line-height: 1.45;
+    box-shadow: 0 0 0 1px rgba(212,175,55,.25) inset;
+  }
+  #workPanel.show { display: block; }
+  #workPanel.approval {
+    background: rgba(52, 30, 20, .97);
+    box-shadow: 0 0 0 1px rgba(255,152,0,.55) inset;
+  }
+  #workText { font-weight: 600; max-height: 62px; overflow: hidden; white-space: pre-line; }
+  #workBar {
+    height: 6px; margin: 7px 0 4px;
+    border-radius: 999px; background: rgba(255,255,255,.14); overflow: hidden;
+  }
+  #workBar i {
+    display: block; height: 100%; width: 0%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #d4af37, #f1d27a);
+    transition: width .35s ease;
+  }
+  #workBar.indeterminate i { width: 40% !important; animation: workSlide 1.2s ease-in-out infinite; }
+  @keyframes workSlide {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(350%); }
+  }
+  #workMeta { color: rgba(248,237,218,.68); font-size: 11px; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius: 999px; }
+  ::-webkit-scrollbar-track { background: transparent; }</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bubble"><img id="face" alt="" /><span id="bubbleText"></span></div>
+  <div id="workPanel">
+    <div id="workText"></div>
+    <div id="workBar"><i></i></div>
+    <div id="workMeta"></div>
+  </div>
+</div>
+<script>
+const $ = (s) => document.querySelector(s)
+const bubble = $('#bubble')
+const bubbleText = $('#bubbleText')
+const faceEl = $('#face')
+const workPanel = $('#workPanel')
+const workText = $('#workText')
+const workBar = $('#workBar')
+const workBarFill = $('#workBar i')
+const workMeta = $('#workMeta')
+
+const PREFIX = ['启禀圣上', '回主子', '启奏吾皇']
+const FACE_BY_ANIM = {
+  '递古董': '05-得意',
+  '跪舔': '05-得意',
+  '银票打手': '04-委屈',
+  '斗嘴': '06-恼怒',
+  '琉璃厂': '02-算计',
+  '常服算账': '02-算计',
+  '塞银票': '02-算计',
+  '府里数银': '02-算计',
+  '点钞': '02-算计',
+  '待机-呼吸': '01-招牌笑',
+  '待机-捻须': '02-算计',
+  '待机-背手': '05-得意',
+  '待机-打哈欠': '08-困倦',
+  '待机-数朝珠': '02-算计',
+}
+
+let lastSayId = -1
+let lastRender = ''
+let sayShownAt = 0
+const SAY_WORK_HOLD_MS = 3200 // 干活时插播的气泡：3 秒多后让回工作面板
+
+function pick(list) { return list[Math.floor(Math.random() * list.length)] }
+function prefixNow() { return pick(PREFIX) }
+
+function renderWork(work) {
+  const approval = work.state === 'approval'
+  const task = work.task || (approval ? '请您示下' : '点着钞票候旨')
+  // 换行放在冒号后面：自称和这句话连着一行，办的事另起一行
+  workText.textContent = approval
+    ? `${prefixNow()}，有一事请旨：\n${work.approval || task}`
+    : `${prefixNow()}，奴才正给您办：\n${task}`
+  const total = Number(work.total) || 0
+  const done = Number(work.done) || 0
+  if (total > 0) {
+    workBar.classList.remove('indeterminate')
+    workBarFill.style.width = `${Math.max(0, Math.min(100, Math.round((done / total) * 100)))}%`
+    workMeta.textContent = `进度 ${done}/${total}`
+  } else {
+    workBar.classList.add('indeterminate')
+    workBarFill.style.width = '40%'
+    workMeta.textContent = approval ? '待您准奏' : '正在办……'
+  }
+  workPanel.classList.toggle('approval', approval)
+  workPanel.classList.add('show')
+  bubble.classList.remove('show')
+  reportHeight()
+}
+
+function reportHeight() {
+  requestAnimationFrame(() => {
+    const el = workPanel.classList.contains('show') ? workPanel : bubble
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const h = Math.ceil(rect.height) + 18   // 内容高度 + 箭头与余量
+    if (h > 0) window.hedaren.resizeBubble(Math.max(48, Math.min(170, h)))
+  })
+}
+function showBubble(text, face) {
+  if (!text) return
+  bubbleText.textContent = text
+  if (!face || face === 'none') {
+    faceEl.style.display = 'none'
+  } else {
+    faceEl.style.display = ''
+    faceEl.src = 'expressions/' + face + '.png'
+  }
+  bubble.classList.add('show')
+  workPanel.classList.remove('show')
+  reportHeight()
+}
+
+function applyState(state) {
+  if (!state) return
+  const workActive = Boolean(state.work && state.work.active)
+  if (workActive) {
+    // 干活时插播一句（点播动作/点击带的台词）：先让这句话冒个泡，
+    // 过一会儿把「正在办什么」的工作面板放回来，不能一直挂着那句台词。
+    const sayId = Number(state.say?.id) || 0
+    if (sayId && sayId !== lastSayId) {
+      lastSayId = sayId
+      sayShownAt = Date.now()
+      const animName = state.anim?.name || ''
+      const explicitFace = state.say.face
+      const face =
+        explicitFace === 'none'
+          ? 'none'
+          : explicitFace || FACE_BY_ANIM[animName] || '02-算计'
+      showBubble(state.say.text || '', face)
+      return
+    }
+    if (bubble.classList.contains('show')) {
+      if (Date.now() - sayShownAt >= SAY_WORK_HOLD_MS) {
+        lastRender = ''
+        renderWork(state.work)
+      }
+      return
+    }
+    const sig = JSON.stringify([
+      state.work.state,
+      state.work.task,
+      state.work.done,
+      state.work.total,
+      state.work.approval,
+    ])
+    if (sig !== lastRender) {
+      lastRender = sig
+      renderWork(state.work)
+    }
+    return
+  }
+  workPanel.classList.remove('show')
+  const sayId = Number(state.say?.id) || 0
+  if (sayId && sayId !== lastSayId) {
+    lastSayId = sayId
+    sayShownAt = Date.now()
+    const animName = state.anim?.name || '待机-呼吸'
+    const explicitFace = state.say.face
+    const face =
+      explicitFace === 'none'
+        ? 'none'
+        : explicitFace || FACE_BY_ANIM[animName] || '01-招牌笑'
+    showBubble(state.say.text || '', face)
+  }
+}
+
+async function boot() {
+  try {
+    applyState(await window.hedaren.readState())
+  } catch {}
+  setInterval(async () => {
+    try {
+      applyState(await window.hedaren.readState())
+    } catch {}
+  }, 400)
+}
+boot()
+</script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>亏空阈值 [WorkBuddy]</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; width: 100%; height: 100%;
+    background: #221f1a; color: rgba(246,241,230,.95);
+    font: 13px/1.5 "Microsoft YaHei", system-ui, sans-serif;
+    user-select: none; -webkit-user-select: none;
+    border: 1px solid rgba(240,200,120,.45); border-radius: 10px;
+    overflow: hidden;
+  }
+  .wrap { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; height: 100%; }
+  .title { font-size: 13px; color: rgba(240,200,120,.95); }
+  .hint { font-size: 11px; color: rgba(246,241,230,.55); }
+  .row { display: flex; align-items: center; gap: 8px; }
+  input {
+    flex: 1; min-width: 0; padding: 7px 9px; border-radius: 7px;
+    border: 1px solid rgba(246,241,230,.22); background: rgba(255,255,255,.06);
+    color: #fff; font: inherit; outline: none;
+  }
+  input:focus { border-color: rgba(240,200,120,.75); }
+  .err { color: #ff8a7a; font-size: 11px; min-height: 14px; }
+  .btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: auto; }
+  button {
+    padding: 6px 14px; border-radius: 7px; border: 1px solid rgba(246,241,230,.22);
+    background: rgba(255,255,255,.06); color: #fff; font: inherit; cursor: pointer;
+  }
+  button.primary { background: rgba(240,200,120,.92); color: #241d10; border-color: transparent; font-weight: 600; }
+  button:hover { filter: brightness(1.08); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="title">亏空阈值（元）</div>
+  <div class="hint">国库余额低于这个数，查国库时和大人就会被关进牢房（0.01 – 10000，两位小数）</div>
+  <div class="row">
+    <input id="val" type="number" min="0.01" max="10000" step="0.01" placeholder="例如 10.00" />
+  </div>
+  <div class="err" id="err"></div>
+  <div class="btns">
+    <button id="cancel">取消</button>
+    <button id="ok" class="primary">确定</button>
+  </div>
+</div>
+<script>
+  const val = document.getElementById('val')
+  const err = document.getElementById('err')
+
+  function clamp(raw) {
+    const n = Number(raw)
+    if (!Number.isFinite(n)) return null
+    const v = Math.round(n * 100) / 100
+    if (v < 0.01 || v > 10000) return null
+    return v
+  }
+
+  window.hedaren.onThresholdInit?.((value) => {
+    if (Number.isFinite(Number(value))) val.value = String(value)
+    setTimeout(() => val.focus(), 30)
+  })
+
+  document.getElementById('ok').addEventListener('click', () => {
+    const v = clamp(val.value)
+    if (v === null) {
+      err.textContent = '请输入 0.01 – 10000 之间的数（最多两位小数）'
+      return
+    }
+    window.hedaren.saveThreshold(v)
+  })
+  document.getElementById('cancel').addEventListener('click', () => window.hedaren.closeThreshold())
+  val.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') document.getElementById('ok').click()
+    if (event.key === 'Escape') window.hedaren.closeThreshold()
+  })
+  // 失焦不当成取消，避免误触；窗口本身很小，点外面由主进程处理
+</script>
+</body>
+</html>

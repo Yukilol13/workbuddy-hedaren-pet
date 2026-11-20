@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "He Shen Desktop Pet",
+    "description": "A chibi Qing official living in his own transparent window: click him for bows, drag to fling him, right-click for chat / treasury / deficit threshold / memory ledger, and fling him into a dsh-pet \"big fat fish\" to net her. Chat really calls a model with your DEEPSEEK_API_KEY (three-layer memory, token accounting); when the balance drops below the deficit threshold (10 CNY by default) he changes into his jail look. Disabling the plugin removes the window, the tray icon and the hedaren_pet tool."
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "SessionStart": [
+    { "hooks": [ { "type": "command", "command": "__HOOK_CMD__ --event SessionStart" } ] }
+  ],
+  "UserPromptSubmit": [
+    { "hooks": [ { "type": "command", "command": "__HOOK_CMD__ --event UserPromptSubmit" } ] }
+  ],
+  "PreToolUse": [
+    { "matcher": "*", "hooks": [ { "type": "command", "command": "__HOOK_CMD__ --event PreToolUse" } ] }
+  ],
+  "PostToolUse": [
+    { "matcher": "*", "hooks": [ { "type": "command", "command": "__HOOK_CMD__ --event PostToolUse" } ] }
+  ],
+  "Notification": [
+    { "matcher": "*", "hooks": [ { "type": "command", "command": "__HOOK_CMD__ --event Notification" } ] }
+  ],
+  "Stop": [
+    { "hooks": [ { "type": "command", "command": "__HOOK_CMD__ --event Stop" } ] }
+  ],
+  "SessionEnd": [
+    { "hooks": [ { "type": "command", "command": "__HOOK_CMD__ --event SessionEnd" } ] }
+  ]
+}
