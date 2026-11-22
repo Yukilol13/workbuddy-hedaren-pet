@@ -1695,6 +1695,7 @@ function ensureChatWindow() {
 }
 
 function createWindow() {
+  healMcpRegistration()
   createPetWindow()
   startPointerGuard()
   setupTray()
@@ -1745,27 +1746,54 @@ const PET_HOOK_SCRIPT = path.join(__dirname, '..', 'hooks', 'pet-hook.js')
 function readAutostartEnabled() {
   try {
     const raw = JSON.parse(fs.readFileSync(AUTOSTART_FILE(), 'utf8'))
-    return raw?.enabled !== false
+    return raw?.enabled === true
   } catch {
-    return true // 没写过 = 默认开（与 install.js 注册 hook 的默认行为一致）
+    return false // 没写过 = 默认关（要开就在府邸里勾上，减少没必要的自启动）
   }
 }
 
-/** 找一个能当 hook 命令用的 node 可执行文件：WorkBuddy 内置 node 优先，PATH 兜底 */
-function findNodeExe() {
-  const candidates = []
-  if (process.env.HEDAREN_NODE_EXE) candidates.push(process.env.HEDAREN_NODE_EXE)
-  const binRoot = path.join(os.homedir(), '.workbuddy', 'binaries', 'node', 'versions')
+/** 找一个能当 hook 命令用的 node 可执行文件（不写死版本号：WorkBuddy current 指针 → 最新版本 → PATH） */
+const PET_ROOT = path.join(__dirname, '..')
+const NODE_WRAPPER = path.join(PET_ROOT, 'bin', process.platform === 'win32' ? 'hedaren-node.cmd' : 'hedaren-node.sh')
+
+/** WorkBuddy 当前在用的那版 node：先读 versions/current 指针，再按版本号从高到低找 */
+function workbuddyNodeExe() {
+  const root = path.join(os.homedir(), '.workbuddy', 'binaries', 'node', 'versions')
+  const bin = process.platform === 'win32' ? 'node.exe' : 'node'
   try {
-    for (const d of fs.readdirSync(binRoot)) {
-      candidates.push(path.join(binRoot, d, process.platform === 'win32' ? 'node.exe' : 'node'))
+    const cur = fs.readFileSync(path.join(root, 'current'), 'utf8').trim()
+    if (cur && fs.existsSync(path.join(root, cur, bin))) return path.join(root, cur, bin)
+  } catch {}
+  try {
+    const dirs = fs.readdirSync(root)
+      .filter((d) => { try { return fs.statSync(path.join(root, d)).isDirectory() } catch { return false } })
+      .map((d) => {
+        const m = d.match(/(\d+)\.(\d+)\.(\d+)/)
+        return { d, v: m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null }
+      })
+      .filter((x) => x.v)
+      .sort((a, b) => (b.v[0] - a.v[0]) || (b.v[1] - a.v[1]) || (b.v[2] - a.v[2]))
+    for (const { d } of dirs) {
+      const exe = path.join(root, d, bin)
+      if (fs.existsSync(exe)) return exe
     }
   } catch {}
-  candidates.push(process.platform === 'win32' ? 'node.exe' : 'node')
-  for (const c of candidates) {
-    try { if (path.isAbsolute(c) && fs.existsSync(c)) return c } catch {}
-  }
+  return ''
+}
+
+function findNodeExe() {
+  if (process.env.HEDAREN_NODE_EXE && fs.existsSync(process.env.HEDAREN_NODE_EXE)) return process.env.HEDAREN_NODE_EXE
+  const wb = workbuddyNodeExe()
+  if (wb) return wb
+  if (fs.existsSync(NODE_WRAPPER)) return NODE_WRAPPER
   return process.platform === 'win32' ? 'node.exe' : 'node'
+}
+
+/** 写进 settings.json 的 hook 命令：优先走包装脚本（执行时才找 node，换版本/换机器都不会失效） */
+function hookCommandLine(event) {
+  const q = (p) => (process.platform === 'win32' ? `"${p}"` : `'${p}'`)
+  const exe = fs.existsSync(NODE_WRAPPER) ? NODE_WRAPPER : findNodeExe()
+  return `${q(exe)} ${q(PET_HOOK_SCRIPT)} --event ${event}`
 }
 
 function sessionStartHookState(cfg) {
@@ -1812,7 +1840,7 @@ function writeAutostartEnabled(enabled) {
   if (!cfg) return { ok: true, note: 'settings.json 不存在或非法，hook 注册跳过' }
   if (!cfg.hooks || typeof cfg.hooks !== 'object' || Array.isArray(cfg.hooks)) cfg.hooks = {}
   if (enabled) {
-    const cmd = `${process.platform === 'win32' ? `"${findNodeExe()}"` : `'${findNodeExe()}'`} "${PET_HOOK_SCRIPT}" --event SessionStart`
+    const cmd = hookCommandLine('SessionStart')
     const state = sessionStartHookState(cfg)
     if (state.installed) {
       // 已在位：只刷新命令（node 路径可能变了），不动别人的
@@ -1838,6 +1866,36 @@ function writeAutostartEnabled(enabled) {
 
 ipcMain.handle('autostart:read', () => readAutostartState())
 ipcMain.handle('autostart:set', (_event, enabled) => ({ ...writeAutostartEnabled(Boolean(enabled)), enabled: Boolean(enabled) }))
+
+// ---- MCP 注册自愈 ----
+// 换电脑、或 WorkBuddy 升级后把 node 目录改成了新版本号，mcp.json 里那条写死的 command
+// 就成了死路径 —— 症状正是「MCP 起不来 / node.exe 版本不一致」。每次启动对一遍，死了就地改活。
+const WB_MCP_FILE = () => path.join(process.env.WORKBUDDY_CONFIG_DIR || path.join(os.homedir(), '.workbuddy'), 'mcp.json')
+
+function healMcpRegistration() {
+  try {
+    const file = WB_MCP_FILE()
+    if (!fs.existsSync(file)) return
+    const cfg = JSON.parse(fs.readFileSync(file, 'utf8'))
+    const entry = cfg?.mcpServers?.['hedaren-pet']
+    if (!entry) return
+    const wantScript = path.join(PET_ROOT, 'mcp-server.js')
+    const cmdOk = typeof entry.command === 'string' && entry.command === 'node' ? true : fs.existsSync(String(entry.command || ''))
+    const argsOk = Array.isArray(entry.args) && entry.args[0] === wantScript
+    if (cmdOk && argsOk) return
+    const nodeExe = workbuddyNodeExe()
+    if (!nodeExe) return
+    entry.command = nodeExe
+    entry.args = [wantScript]
+    entry.env = { ...(entry.env || {}), HEDAREN_PET_HOME: STATE_DIR }
+    delete entry.env.ELECTRON_RUN_AS_NODE
+    try { fs.copyFileSync(file, `${file}.hedaren-pet.bak`) } catch {}
+    fs.writeFileSync(file, JSON.stringify(cfg, null, 2), 'utf8')
+    log(`mcp.json 已自愈：command=${nodeExe}`)
+  } catch (error) {
+    log(`mcp.json 自愈失败（忽略）：${error?.message}`)
+  }
+}
 
 // ---- 和大人府邸 IPC：用子进程跑 mansion-data.js（ESM），避免 CJS 主进程直接 import ----
 function callMansionData(args = []) {

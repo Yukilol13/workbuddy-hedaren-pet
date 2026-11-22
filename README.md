@@ -10,13 +10,14 @@ Q 版两头身清朝权臣：全套动画表情、可拖拽甩飞、气泡台词
 
 ## 给 Agent 的安装说明（照做即可）
 
-**前提**：本机装了 WorkBuddy；Node ≥ 18（用 WorkBuddy 自带的 node 也行）。
+**前提**：本机装了 WorkBuddy 就行。node 不用另装、也不用管版本——安装器和 hook 都会自动找 WorkBuddy 自带的那份（找不到才退到系统 node，再退到项目自带的 Electron 内置 Node）。
 
 ```bash
 # 1) 把仓库放到任意目录，进入项目根
 cd workbuddy-hedaren-pet
 
 # 2) 一键安装（幂等，可重复跑）
+#    Windows 双击 install.bat；macOS/Linux 或命令行：
 node --no-warnings install.js
 ```
 
@@ -30,8 +31,8 @@ node --no-warnings install.js
 ```bash
 # 3) 重启 WorkBuddy（hooks 和 MCP 才认账）
 
-# 4) 启动桌宠窗口
-node --no-warnings start.js        # 或 Windows 双击 start.bat
+# 4) 启动桌宠窗口（Windows 双击 start.bat 最省事）
+node --no-warnings start.js
 
 # 5) 验一验
 node --no-warnings hedarenctl.js status
@@ -39,9 +40,11 @@ node --no-warnings hedarenctl.js status
 
 装完之后，在 WorkBuddy 里说「安装和大人桌宠」「让和大人出来」都能使唤他。
 
+> **换电脑不会翻车的缘故**：hooks 和 MCP 里不再写死 `.../versions/22.22.2-6/node.exe` 这种带版本号的路径（以前就是栽在这——别人的电脑用户名不同、WorkBuddy 版本不同，那条路径直接是死的，于是报 node 版本不一致）。现在 hook 走 `bin/hedaren-node.cmd` 包装脚本，**每次执行时才去读 WorkBuddy 的 `versions/current` 指针**找当前在用的 node；MCP 那条路径桌宠每次启动都会自愈一遍。哪台机器、哪个版本都对得上。
+
 > **两条要交代的规矩**：
-> - **自动唤醒默认是关的**——想让和大人每次开新会话自己上朝，去「和大人府邸 → 基本设置」勾上「皇上开衙时，奴才自己来上朝」（改完重启 WorkBuddy 生效）。
-> - **守护进程不自动跑**——托盘右键「守护进程：开启/关闭」或 `hedarenctl.js daemon-start / daemon-stop` 手动启停。管的是：桌面聊天窗离线回复、右键查账本国库、30 秒自动刷国库和肚兜亏空判定。关着不误事，**跟和大人说话走的是 WorkBuddy 会话模型，不经过它**。
+> - **自动唤醒默认是关的**——想让和大人每次开新会话自己上朝，去「和大人府邸 → 基本设置」勾上「皇上开衙时，奴才自己来上朝」（改完重启 WorkBuddy 生效）。默认不注册 SessionStart hook，省一次进程启动。
+> - **守护进程不自动跑**——托盘右键「守护进程：开启/关闭」或 `hedarenctl.js daemon-start / daemon-stop` 手动启停，不开也不影响任何主功能。管的是：桌面聊天窗离线回复、右键查账本国库、30 秒自动刷国库和肚兜亏空判定。**跟和大人说话走的是 WorkBuddy 会话模型，不经过它**。
 
 卸载：`node --no-warnings install.js --uninstall`（只摘 hooks/MCP，不动您的记忆账本）。
 
@@ -101,8 +104,10 @@ core.js            核心引擎（状态/国库/对话上下文/记忆/控制）
 mcp-server.js      MCP server（Agent 反向使唤桌宠）
 hedarenctl.js      命令行控制器（Skill 走这条）
 install.js         一键安装/卸载
-start.js / start.bat  启动窗口（守护进程手动开）
-pet-daemon.js      守护进程（手动启停：离线回复/账本/国库轮询）
+node-runtime.js    node 运行时探测（不写死版本号，跨机器通用）
+start.js / start.bat / install.bat  启动与安装入口
+bin/hedaren-node   运行时包装脚本（hook 每次执行时现找 node）
+pet-daemon.js      守护进程（默认不起，手动启停：离线回复/账本/国库轮询）
 electron-runtime.js  通用 Electron 探测/下载/纯 JS 解压
 app/               Electron 窗口本体（动画/气泡/聊天/托盘/府邸）
 hooks/             工作状态 hook 桥（pet-hook.js）

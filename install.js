@@ -23,6 +23,7 @@ import { spawn } from 'node:child_process'
 
 import { ensureElectron } from './electron-runtime.js'
 import { init as coreInit } from './core.js'
+import { hookCommandLine, resolveRuntime, wbDir as rtWbDir } from './node-runtime.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const HOME = homedir()
@@ -42,6 +43,16 @@ const MANAGED_EVENTS = ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostT
 
 const SKILL_DIR = join(WB_DIR, 'skills', 'hedaren-pet')
 
+/** 用户手动开关：autostart.json 里 enabled === false 表示关（没写过 = 默认关） */
+function readAutostartEnabled() {
+  try {
+    const raw = JSON.parse(readFileSync(join(STATE_DIR, 'autostart.json'), 'utf8'))
+    return raw?.enabled === true
+  } catch {
+    return false
+  }
+}
+
 const argv = process.argv.slice(2)
 const noStart = argv.includes('--no-start')
 const forceDownload = argv.includes('--force-download')
@@ -55,11 +66,9 @@ function backup(file) {
   try { copyFileSync(file, bak); log(`已备份 → ${bak}`) } catch (e) { log('备份失败（继续）：', e.message) }
 }
 
-/** 生成跨平台、带引号的 node 命令 */
+/** 生成跨平台、带引号的 hook 命令（走 bin/hedaren-node 包装，运行时才解析 node，不写死版本） */
 function nodeCmd(script, args = '') {
-  const exe = process.execPath // 当前 node 绝对路径（WorkBuddy 内置 node）
-  const q = (p) => platform() === 'win32' ? `"${p}"` : `'${p}'`
-  return `${q(exe)} ${q(script)}${args ? ' ' + args : ''}`
+  return hookCommandLine(script, args)
 }
 
 /** 合并 hooks 到 settings.json（全程合法 JSON，哨兵键标记归属） */
@@ -112,6 +121,16 @@ function mergeHooks() {
   }
   cfg.hooks[HOOK_SENTINEL] = []
 
+  // 自动唤醒默认关：autostart.json 说关着，就别留 SessionStart 这条（省一次进程启动，
+  // 用户要开时在府邸勾选，由桌宠主进程自己把 hook 加回去）
+  if (!readAutostartEnabled() && Array.isArray(cfg.hooks.SessionStart)) {
+    cfg.hooks.SessionStart = cfg.hooks.SessionStart.filter(
+      (g) => !(g?.hooks || []).some((h) => String(h?.command || '').includes('pet-hook.js')),
+    )
+    if (cfg.hooks.SessionStart.length === 0) delete cfg.hooks.SessionStart
+    log('自动唤醒处于关闭状态，未注册 SessionStart hook')
+  }
+
   backup(SETTINGS)
   writeFileSync(SETTINGS, JSON.stringify(cfg, null, 2), 'utf8')
   log(`已注册工作状态 hooks（${MANAGED_EVENTS.length} 类事件）→ ${SETTINGS}`)
@@ -141,16 +160,28 @@ function mergeMcp() {
     return true
   }
 
+  const rt = resolveRuntime()
+  if (!rt) {
+    log('⚠ 找不到可用的 Node 运行时，MCP 注册跳过（先装 WorkBuddy 再来）')
+    return false
+  }
+  const env = { HEDAREN_PET_HOME: STATE_DIR }
+  // Electron 当 node 用时必须开这个开关，否则它会把 mcp-server.js 当应用主入口
+  if (rt.kind === 'electron') env.ELECTRON_RUN_AS_NODE = '1'
+  const prev = cfg.mcpServers[MCP_MARK] || {}
   cfg.mcpServers[MCP_MARK] = {
     type: 'stdio',
-    command: process.execPath,
+    command: rt.exe,
     args: [MCP_SCRIPT],
-    env: { HEDAREN_PET_HOME: STATE_DIR },
+    env,
     description: '和大人桌面宠物控制（说话/动作/国库/对话/记忆）',
   }
+  // 用户之前在连接器面板里手动禁用过，就保留禁用状态，别给人家偷偷打开
+  if (prev.disabled === true) cfg.mcpServers[MCP_MARK].disabled = true
   backup(MCP_FILE)
   writeFileSync(MCP_FILE, JSON.stringify(cfg, null, 2), 'utf8')
   log(`已注册 MCP server → ${MCP_FILE}（工具名 mcp__${MCP_MARK}__hedaren_pet）`)
+  log(`MCP 运行时：${rt.exe}（来源 ${rt.source}${rt.version ? ' ' + rt.version : ''}）`)
   return true
 }
 
@@ -174,10 +205,13 @@ function installSkill() {
   const tplFile = join(HERE, 'skill-template', 'SKILL.md')
   if (!existsSync(tplFile)) { log('未找到 skill 模板，跳过 Skill 安装'); return }
   let md = readFileSync(tplFile, 'utf8')
+  const wrapper = join(HERE, 'bin', platform() === 'win32' ? 'hedaren-node.cmd' : 'hedaren-node.sh')
+  const rt = resolveRuntime()
   const replacements = {
     '{{PET_DIR}}': HERE,
     '{{STATE_DIR}}': STATE_DIR,
-    '{{NODE_EXE}}': process.execPath,
+    // 给 Agent 抄的命令也走包装脚本：换机器、换 node 版本都不用改文档
+    '{{NODE_EXE}}': existsSync(wrapper) ? wrapper : (rt ? rt.exe : process.execPath),
   }
   for (const [k, v] of Object.entries(replacements)) md = md.split(k).join(v)
   if (uninstall) {
@@ -240,11 +274,12 @@ async function main() {
 
   log('')
   log('✅ 安装完成！')
-  log('   • 桌宠动画/拖拽：已启动')
+  log('   • 桌宠窗口：已启动（没起来就双击 start.bat）')
   log('   • 工作状态联动：已注册 hooks（需重启 WorkBuddy 生效）')
   log('   • 积分国库查询：已注册 MCP 工具 mcp__' + MCP_MARK + '__hedaren_pet')
-  log('   • AI 对话：config.json 填 API Key 启用；留空走本地人格话术')
-  log('   • 捕鱼功能：已按需求关闭')
+  log('   • 跟和大人说话：用 WorkBuddy 当前会话模型，不用另配 API Key')
+  log('   • 自动唤醒 / 守护进程：默认都关着，要开在府邸或托盘里点')
+  log('   • 运行时：全部走 bin/hedaren-node 运行时探测，换机器不用改任何路径')
 }
 
 main().catch((e) => {

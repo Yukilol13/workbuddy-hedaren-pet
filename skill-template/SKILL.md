@@ -12,7 +12,7 @@ description: 和大人（和珅）桌面宠物控制。当用户提到"和大人
 - 项目目录：`{{PET_DIR}}`
 - 状态目录：`{{STATE_DIR}}`（环境变量 `HEDAREN_PET_HOME` 可覆盖）
 - 控制脚本：`{{PET_DIR}}/hedarenctl.js`
-- Node：`{{NODE_EXE}}`
+- 运行时：`{{NODE_EXE}}`（运行时包装脚本，每次执行时自己找 WorkBuddy 当前的 node，不含版本号，换机器不用改）
 
 ## 触发与用法
 
