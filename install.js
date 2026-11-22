@@ -15,7 +15,7 @@
  *   node install.js --uninstall     # 卸载（移除 hooks / MCP 注册）
  */
 
-import { existsSync, readFileSync, writeFileSync, copyFileSync, mkdirSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync, copyFileSync, mkdirSync, chmodSync } from 'node:fs'
 import { homedir, platform } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -200,6 +200,16 @@ function ensureConfig() {
   log(`已生成配置模板 → ${cfgFile}`)
 }
 
+/** macOS/Linux 下包装脚本要有执行位（git 里存的是 100644） */
+function ensureWrapperExec() {
+  if (platform() === 'win32') return
+  try {
+    chmodSync(join(HERE, 'bin', 'hedaren-node.sh'), 0o755)
+  } catch (e) {
+    log('包装脚本执行位设置失败（不影响 Windows）：' + e.message)
+  }
+}
+
 /** 把 Skill 装进 ~/.workbuddy/skills/hedaren-pet/，替换路径占位符 */
 function installSkill() {
   const tplFile = join(HERE, 'skill-template', 'SKILL.md')
@@ -265,6 +275,7 @@ async function main() {
 
   // 3) 配置
   ensureConfig()
+  ensureWrapperExec()
   mergeHooks()
   mergeMcp()
   installSkill()
