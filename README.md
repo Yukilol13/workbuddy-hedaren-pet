@@ -31,14 +31,22 @@ node --no-warnings install.js
 ```bash
 # 3) 重启 WorkBuddy（hooks 和 MCP 才认账）
 
-# 4) 启动桌宠窗口（Windows 双击 start.bat 最省事）
-node --no-warnings start.js
+# 4) 启动桌宠窗口
+#    Windows：双击 start.vbs（推荐，无窗口）或 start.bat（黑框一闪即关）
+#    命令行：
+node --no-warnings start.js --detached
 
 # 5) 验一验
 node --no-warnings hedarenctl.js status
 ```
 
 装完之后，在 WorkBuddy 里说「安装和大人桌宠」「让和大人出来」都能使唤他。
+
+> **启动方式（不会留下黑框）**：和大人是独立 Electron 进程，不需要 cmd 或 node 给他「当支架」。
+> - `start.vbs` —— 推荐，双击后无任何窗口，Electron 被直接拉起（父进程是 explorer，脚本随即退出）
+> - `start.bat` —— 兼容入口，点开一闪即关，不留常驻窗口；它也是 `start "" electron.exe` 直接起，不再挂 node
+> - 桌面/任务栏想更方便：右键 `start.vbs` → 发送到 → 桌面快捷方式，以后单击即开
+> - 想让 WorkBuddy 替他开场：府邸勾上自动唤醒，开新会话时由 WorkBuddy 拉起（这条路径也没有窗口）
 
 > **换电脑不会翻车的缘故**：hooks 和 MCP 里不再写死 `.../versions/22.22.2-6/node.exe` 这种带版本号的路径（以前就是栽在这——别人的电脑用户名不同、WorkBuddy 版本不同，那条路径直接是死的，于是报 node 版本不一致）。现在 hook 走 `bin/hedaren-node.cmd` 包装脚本，**每次执行时才去读 WorkBuddy 的 `versions/current` 指针**找当前在用的 node；MCP 那条路径桌宠每次启动都会自愈一遍。哪台机器、哪个版本都对得上。
 
@@ -105,7 +113,10 @@ mcp-server.js      MCP server（Agent 反向使唤桌宠）
 hedarenctl.js      命令行控制器（Skill 走这条）
 install.js         一键安装/卸载
 node-runtime.js    node 运行时探测（不写死版本号，跨机器通用）
-start.js / start.bat / install.bat  启动与安装入口
+start.js           命令行启动（--detached 脱离父进程）
+start.vbs          静默启动器（Windows 双击即开，无窗口，不等 node）
+start.bat          兼容入口（一闪即关，不常驻）
+install.bat        一键安装入口
 bin/hedaren-node   运行时包装脚本（hook 每次执行时现找 node）
 pet-daemon.js      守护进程（默认不起，手动启停：离线回复/账本/国库轮询）
 electron-runtime.js  通用 Electron 探测/下载/纯 JS 解压

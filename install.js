@@ -285,7 +285,7 @@ async function main() {
 
   log('')
   log('✅ 安装完成！')
-  log('   • 桌宠窗口：已启动（没起来就双击 start.bat）')
+  log('   • 桌宠窗口：已启动（往后双击 start.vbs 即可，无窗口；start.bat 也行）')
   log('   • 工作状态联动：已注册 hooks（需重启 WorkBuddy 生效）')
   log('   • 积分国库查询：已注册 MCP 工具 mcp__' + MCP_MARK + '__hedaren_pet')
   log('   • 跟和大人说话：用 WorkBuddy 当前会话模型，不用另配 API Key')

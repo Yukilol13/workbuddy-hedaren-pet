@@ -76,6 +76,10 @@ description: 和大人（和珅）桌面宠物控制。当用户提到"和大人
 {{NODE_EXE}} --no-warnings "{{PET_DIR}}/install.js" --uninstall        # 卸载（移除 hooks/MCP 注册）
 ```
 
+**Windows 用户自己开桌宠**：让他双击 `{{PET_DIR}}/start.vbs`（推荐，**无窗口**，Electron 被直接拉起，父进程不是 cmd/node）；`start.bat` 是兼容入口，点开一闪即关、不留常驻黑框。**不要**用 `node start.js` 前台跑——那样 node 会陪窗口一起活着，控制台窗口关不掉。桌宠自带单实例锁，重复双击只会把已有窗口叫到前面，不会开出第二只。
+
+> Agent 自己在这台机器上替他启动时：工具环境会在回合结束时回收后代进程，直接 `node start.js` 或后台方式起的 Electron 活不过本回合。可用 `Start-Process explorer.exe "<PET_DIR>\start.vbs"`，由 explorer 当父进程，桌宠即可跨回合存活。
+
 **绑定启动（自动唤醒，默认关）**：自动唤醒开关在**和大人府邸 → 基本设置**（勾选「皇上开衙时，奴才自己来上朝」）。开关同时管理两处：`{{STATE_DIR}}/autostart.json`（`{ "enabled": false }`，改完立即生效）和 `~/.workbuddy/settings.json` 的 SessionStart hook 注册（增删后需重启 WorkBuddy 生效；只动含 `pet-hook.js` 的条目，不碰用户其它 hook）。开启后用户开新会话时若桌宠没在运行会自动出现（判活靠 `window.lock` 心跳 + 60 秒防抖锁）。若开了开关但开会话后桌宠没自动出现（WorkBuddy 回收 hook 子进程的版本），引导用户把 `start.bat` 快捷方式放进 `shell:startup` 开机自启兜底。
 
 ## 工作机制
