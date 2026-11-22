@@ -12,14 +12,31 @@ Q 版两头身清朝权臣：全套动画表情、可拖拽甩飞、气泡台词
 
 **前提**：本机装了 WorkBuddy 就行。node 不用另装、也不用管版本——安装器和 hook 都会自动找 WorkBuddy 自带的那份（找不到才退到系统 node，再退到项目自带的 Electron 内置 Node）。
 
-```bash
-# 1) 把仓库放到任意目录，进入项目根
-cd workbuddy-hedaren-pet
+```powershell
+# 1) 取回仓库（不用装 git，Windows 自带 curl.exe 和 Expand-Archive）
+mkdir hedaren-pet; cd hedaren-pet
+curl.exe -L -o pet.zip "https://api.github.com/repos/Yukilol13/workbuddy-hedaren-pet/zipball/main"
+Expand-Archive pet.zip
+cd Yukilol13-workbuddy-hedaren-pet-*
 
 # 2) 一键安装（幂等，可重复跑）
-#    Windows 双击 install.bat；macOS/Linux 或命令行：
+node --no-warnings install.js        # 或双击 install.bat
+```
+
+macOS / Linux：
+
+```bash
+mkdir hedaren-pet && cd hedaren-pet
+curl -L -o pet.zip "https://api.github.com/repos/Yukilol13/workbuddy-hedaren-pet/zipball/main"
+unzip -q pet.zip && cd Yukilol13-workbuddy-hedaren-pet-*
 node --no-warnings install.js
 ```
+
+> 国内网络 GitHub 打不开时，把 zip 地址换成任一镜像前缀，例如：
+> `https://ghproxy.net/https://github.com/Yukilol13/workbuddy-hedaren-pet/archive/refs/heads/main.zip`
+> （镜像站时好时坏，可多试几个；`api.github.com` 通常是通的。）
+
+**使用者只要在 WorkBuddy 里说一句**：「帮我安装 https://github.com/Yukilol13/workbuddy-hedaren-pet 这个桌宠」，Agent 照着本节做完即成。已装过旧版的机器重跑 `install.js` 即可覆盖升级，不用先卸载。
 
 安装器替您办四件事，一件都不少：
 
